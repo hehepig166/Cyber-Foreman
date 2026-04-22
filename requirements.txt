@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+sqlalchemy
+psutil
+APScheduler
+nvidia-ml-py
+PyYAML
+pytest
+httpx

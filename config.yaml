@@ -1,0 +1,20 @@
+server:
+  host: 0.0.0.0
+  port: 8021
+
+database:
+  path: data/monitor.db
+
+collection:
+  sample_interval_seconds: 5
+  process_top_n: 50
+
+retention:
+  # Set null to disable cleanup.
+  days: 30
+
+logging:
+  file_path: logs/monitor.log
+  level: INFO
+  max_bytes: 10485760
+  backup_count: 5

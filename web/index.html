@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lightweight Server Monitor</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+    <style>
+      body {
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #0b1220;
+        color: #e2e8f0;
+      }
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 16px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+      .grid-single {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+      .card {
+        background: #172033;
+        border: 1px solid #25324a;
+        box-shadow: 0 2px 10px rgba(2, 6, 23, 0.28);
+        border-radius: 10px;
+        padding: 12px;
+      }
+      .chart {
+        width: 100%;
+        height: 280px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+      th,
+      td {
+        text-align: left;
+        padding: 8px;
+        border-bottom: 1px solid #1f2937;
+      }
+      .name-cell {
+        max-width: 280px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        cursor: help;
+      }
+      .cmdline-tooltip {
+        position: fixed;
+        z-index: 9999;
+        display: none;
+        max-width: 680px;
+        min-width: 280px;
+        padding: 8px 10px;
+        border-radius: 6px;
+        border: 1px solid #334155;
+        background: #0b1220;
+        color: #e2e8f0;
+        white-space: normal;
+        word-break: break-all;
+        box-shadow: 0 8px 24px rgba(2, 6, 23, 0.5);
+        font-size: 12px;
+        line-height: 1.4;
+        pointer-events: none;
+      }
+      .muted {
+        color: #94a3b8;
+        font-size: 12px;
+      }
+      .topbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+      }
+      select {
+        background: #1f2937;
+        color: #e2e8f0;
+        border: 1px solid #374151;
+        border-radius: 6px;
+        padding: 6px 8px;
+      }
+      .bar {
+        width: 100%;
+        height: 8px;
+        background: #1f2937;
+        border-radius: 999px;
+        overflow: hidden;
+      }
+      .bar > span {
+        display: block;
+        height: 100%;
+        background: #22c55e;
+      }
+      @media (max-width: 900px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="topbar">
+        <h2>服务器轻量监控</h2>
+        <div>
+          <label for="rangeSelect">时间范围：</label>
+          <select id="rangeSelect">
+            <option value="1h">最近 1 小时</option>
+            <option value="24h">最近 24 小时</option>
+            <option value="7d">最近 7 天</option>
+          </select>
+        </div>
+      </div>
+      <div class="muted" id="statusLine">加载中...</div>
+      <div class="grid" style="margin-top: 10px">
+        <div class="card">
+          <h3>总体 CPU / 内存</h3>
+          <div id="cpuMemChart" class="chart"></div>
+        </div>
+        <div class="card">
+          <h3>总体 GPU / 显存</h3>
+          <div id="gpuChart" class="chart"></div>
+        </div>
+      </div>
+      <div class="grid-single" style="margin-top: 16px">
+        <div class="card">
+          <h3>GPU 每卡总览</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>GPU</th>
+                <th>型号</th>
+                <th>利用率</th>
+                <th>显存使用</th>
+                <th>GPU进程数</th>
+              </tr>
+            </thead>
+            <tbody id="gpuDeviceTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="grid" style="margin-top: 16px">
+        <div class="card">
+          <h3>Top CPU 进程</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>PID</th>
+                <th>进程</th>
+                <th>CPU%</th>
+                <th>RSS(MB)</th>
+                <th>用户</th>
+              </tr>
+            </thead>
+            <tbody id="processTableBody"></tbody>
+          </table>
+        </div>
+        <div class="card">
+          <h3>GPU 进程</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>GPU</th>
+                <th>PID</th>
+                <th>进程</th>
+                <th>用户</th>
+                <th>显存(MB)</th>
+              </tr>
+            </thead>
+            <tbody id="gpuProcessTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div id="cmdlineTooltip" class="cmdline-tooltip"></div>
+    <script src="/static/app.js"></script>
+  </body>
+</html>
