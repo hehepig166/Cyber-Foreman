@@ -6,7 +6,12 @@ const processTableBody = document.getElementById("processTableBody");
 const gpuProcessTableBody = document.getElementById("gpuProcessTableBody");
 const gpuDeviceTableBody = document.getElementById("gpuDeviceTableBody");
 const cmdlineTooltip = document.getElementById("cmdlineTooltip");
+const sortableHeaders = document.querySelectorAll("th.sortable");
 let configText = "";
+let currentCpuProcesses = [];
+let currentGpuProcesses = [];
+let cpuSortState = { key: "cpu_percent", order: "desc" };
+let gpuSortState = { key: "used_gpu_memory_mb", order: "desc" };
 
 function escAttr(value) {
   if (value === null || value === undefined) return "";
@@ -25,7 +30,8 @@ function renderNameCell(name, cmdline) {
 }
 
 function showCmdlineTooltip(text, mouseX, mouseY) {
-  cmdlineTooltip.textContent = text;
+  const raw = text || "-";
+  cmdlineTooltip.innerHTML = `<pre><code>${renderCommandHighlight(raw)}</code></pre>`;
   cmdlineTooltip.style.display = "block";
   const margin = 14;
   const width = cmdlineTooltip.offsetWidth;
@@ -40,6 +46,22 @@ function showCmdlineTooltip(text, mouseX, mouseY) {
 
 function hideCmdlineTooltip() {
   cmdlineTooltip.style.display = "none";
+}
+
+function classifyToken(token, index) {
+  if (index === 0) return "cmdline-token-exec";
+  if (/^--?[a-zA-Z0-9][a-zA-Z0-9_-]*/.test(token)) return "cmdline-token-flag";
+  if (/^['"].*['"]$/.test(token)) return "cmdline-token-string";
+  if (/^-?\d+(\.\d+)?$/.test(token)) return "cmdline-token-number";
+  return "cmdline-token-plain";
+}
+
+function renderCommandHighlight(raw) {
+  const chunks = (raw.match(/'[^']*'|\"[^\"]*\"|\S+/g) || [raw]).map((token, index) => {
+    const klass = classifyToken(token, index);
+    return `<span class="${klass}">${escAttr(token)}</span>`;
+  });
+  return chunks.join('<span class="cmdline-token-plain"> </span>');
 }
 
 function fmt(num, digits = 1) {
@@ -121,6 +143,41 @@ function renderGpuProcesses(rows) {
   }
 }
 
+function sortRows(rows, key, order) {
+  const direction = order === "asc" ? 1 : -1;
+  return [...rows].sort((a, b) => {
+    const av = a?.[key];
+    const bv = b?.[key];
+    const aMissing = av === null || av === undefined;
+    const bMissing = bv === null || bv === undefined;
+    if (aMissing && bMissing) return 0;
+    if (aMissing) return 1;
+    if (bMissing) return -1;
+    if (typeof av === "number" && typeof bv === "number") {
+      return (av - bv) * direction;
+    }
+    return String(av).localeCompare(String(bv), "zh-CN", { sensitivity: "base" }) * direction;
+  });
+}
+
+function renderProcessTables() {
+  renderProcesses(sortRows(currentCpuProcesses, cpuSortState.key, cpuSortState.order));
+  renderGpuProcesses(sortRows(currentGpuProcesses, gpuSortState.key, gpuSortState.order));
+  refreshSortHeaderIndicators();
+}
+
+function refreshSortHeaderIndicators() {
+  for (const header of sortableHeaders) {
+    const table = header.dataset.table;
+    const key = header.dataset.sortKey;
+    const state = table === "cpu" ? cpuSortState : gpuSortState;
+    const base = header.dataset.baseLabel || header.textContent.replace(/[↑↓↕]$/, "").trim();
+    header.dataset.baseLabel = base;
+    const indicator = key === state.key ? (state.order === "asc" ? "↑" : "↓") : "↕";
+    header.textContent = `${base}${indicator}`;
+  }
+}
+
 function renderGpuDevices(rows) {
   gpuDeviceTableBody.innerHTML = "";
   if (!rows.length) {
@@ -163,9 +220,10 @@ async function loadSnapshot() {
   const snapshot = await snapshotResp.json();
   const status = await statusResp.json();
 
-  renderProcesses(snapshot.processes || []);
+  currentCpuProcesses = snapshot.processes || [];
+  currentGpuProcesses = snapshot.gpu_processes || [];
+  renderProcessTables();
   renderGpuDevices(snapshot.gpu_devices || []);
-  renderGpuProcesses(snapshot.gpu_processes || []);
 
   const host = snapshot.host;
   const ts = host?.timestamp ? new Date(host.timestamp).toLocaleString() : "暂无样本";
@@ -194,8 +252,32 @@ async function refreshAll() {
 }
 
 rangeSelect.addEventListener("change", refreshAll);
+for (const header of sortableHeaders) {
+  header.addEventListener("click", () => {
+    const table = header.dataset.table;
+    const key = header.dataset.sortKey;
+    if (!key) return;
+    if (table === "cpu") {
+      cpuSortState = {
+        key,
+        order: cpuSortState.key === key && cpuSortState.order === "desc" ? "asc" : "desc",
+      };
+    } else {
+      gpuSortState = {
+        key,
+        order: gpuSortState.key === key && gpuSortState.order === "desc" ? "asc" : "desc",
+      };
+    }
+    renderProcessTables();
+  });
+}
 document.addEventListener("mousemove", (event) => {
-  const cell = event.target.closest(".name-cell");
+  const eventTarget = event.target instanceof Element ? event.target : event.target?.parentElement;
+  if (!eventTarget) {
+    hideCmdlineTooltip();
+    return;
+  }
+  const cell = eventTarget.closest(".name-cell");
   if (!cell) {
     hideCmdlineTooltip();
     return;
@@ -208,6 +290,14 @@ document.addEventListener("mousemove", (event) => {
   showCmdlineTooltip(tooltipText, event.clientX, event.clientY);
 });
 document.addEventListener("mouseleave", hideCmdlineTooltip);
+document.addEventListener("dblclick", (event) => {
+  const eventTarget = event.target instanceof Element ? event.target : event.target?.parentElement;
+  if (!eventTarget) return;
+  if (!eventTarget.closest(".interactive-table")) return;
+  event.preventDefault();
+  const selection = window.getSelection();
+  selection?.removeAllRanges();
+});
 window.addEventListener("resize", () => {
   cpuMemChart.resize();
   gpuChart.resize();

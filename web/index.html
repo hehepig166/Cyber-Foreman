@@ -43,11 +43,28 @@
         border-collapse: collapse;
         font-size: 13px;
       }
+      .interactive-table {
+        user-select: none;
+      }
       th,
       td {
         text-align: left;
         padding: 8px;
         border-bottom: 1px solid #1f2937;
+      }
+      th.sortable {
+        cursor: pointer;
+        user-select: none;
+        position: relative;
+        border: 1px solid #334155;
+        border-radius: 6px;
+        background: rgba(30, 41, 59, 0.5);
+        transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+      }
+      th.sortable:hover {
+        color: #e2e8f0;
+        border-color: #475569;
+        background: rgba(51, 65, 85, 0.6);
       }
       .name-cell {
         max-width: 280px;
@@ -73,6 +90,29 @@
         font-size: 12px;
         line-height: 1.4;
         pointer-events: none;
+      }
+      .cmdline-tooltip pre {
+        margin: 0;
+        white-space: pre-wrap;
+      }
+      .cmdline-tooltip code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      }
+      .cmdline-token-exec {
+        color: #60a5fa;
+        font-weight: 600;
+      }
+      .cmdline-token-flag {
+        color: #f59e0b;
+      }
+      .cmdline-token-string {
+        color: #34d399;
+      }
+      .cmdline-token-number {
+        color: #f472b6;
+      }
+      .cmdline-token-plain {
+        color: #e5e7eb;
       }
       .muted {
         color: #94a3b8;
@@ -154,14 +194,14 @@
       <div class="grid" style="margin-top: 16px">
         <div class="card">
           <h3>Top CPU 进程</h3>
-          <table>
+          <table class="interactive-table">
             <thead>
               <tr>
-                <th>PID</th>
-                <th>进程</th>
-                <th>CPU%</th>
-                <th>RSS(MB)</th>
-                <th>用户</th>
+                <th class="sortable" data-table="cpu" data-sort-key="pid">PID</th>
+                <th class="sortable" data-table="cpu" data-sort-key="name">进程</th>
+                <th class="sortable" data-table="cpu" data-sort-key="cpu_percent">CPU%</th>
+                <th class="sortable" data-table="cpu" data-sort-key="rss_mb">RSS(MB)</th>
+                <th class="sortable" data-table="cpu" data-sort-key="user_name">用户</th>
               </tr>
             </thead>
             <tbody id="processTableBody"></tbody>
@@ -169,14 +209,14 @@
         </div>
         <div class="card">
           <h3>GPU 进程</h3>
-          <table>
+          <table class="interactive-table">
             <thead>
               <tr>
-                <th>GPU</th>
-                <th>PID</th>
-                <th>进程</th>
-                <th>用户</th>
-                <th>显存(MB)</th>
+                <th class="sortable" data-table="gpu" data-sort-key="gpu_index">GPU</th>
+                <th class="sortable" data-table="gpu" data-sort-key="pid">PID</th>
+                <th class="sortable" data-table="gpu" data-sort-key="process_name">进程</th>
+                <th class="sortable" data-table="gpu" data-sort-key="user_name">用户</th>
+                <th class="sortable" data-table="gpu" data-sort-key="used_gpu_memory_mb">显存(MB)</th>
               </tr>
             </thead>
             <tbody id="gpuProcessTableBody"></tbody>
