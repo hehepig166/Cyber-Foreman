@@ -122,6 +122,18 @@ def test_build_gpu_report_text_and_send(initialized_db, test_settings, monkeypat
                 process_count=2,
             )
         )
+        session.add(
+            GpuDeviceSample(
+                timestamp=now,
+                gpu_uuid="gpu1",
+                gpu_index=1,
+                gpu_name="GPU1",
+                gpu_util=0.0,
+                gpu_mem_used_mb=128.0,
+                gpu_mem_total_mb=10000.0,
+                process_count=1,
+            )
+        )
 
     called: dict[str, str] = {}
 
@@ -142,6 +154,7 @@ def test_build_gpu_report_text_and_send(initialized_db, test_settings, monkeypat
     assert "2.93/9.77" in called["text"]
     assert "GB" in called["text"]
     assert "进程 2" in called["text"]
+    assert "🌑 GPU1:" in called["text"]
     assert "⚪ GPU7: 计算 --.-% | 显存 --/-- GB (--.-%)" in called["text"]
     assert called["timeout"] == "5"
 

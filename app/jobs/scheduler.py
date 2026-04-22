@@ -31,13 +31,14 @@ def _mask_webhook_url(webhook_url: str) -> str:
 def _gpu_util_emoji(util: float | None) -> str:
     if util is None:
         return "⚪"
-    if util < 20:
+    normalized_util = max(0.0, round(util, 2))
+    if normalized_util == 0.0:
         return "🌑"
-    if util < 40:
+    if normalized_util < 20:
         return "🌘"
-    if util < 60:
+    if normalized_util < 60:
         return "🌗"
-    if util < 80:
+    if normalized_util < 80:
         return "🌖"
     return "🌕"
 
