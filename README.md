@@ -48,6 +48,12 @@ logging:
   level: INFO
   max_bytes: 10485760
   backup_count: 5
+
+feishu:
+  enabled: false
+  report_interval_seconds: 3600
+  webhook_env_var: FEISHU_BOT_WEBHOOK
+  timeout_seconds: 5
 ```
 
 字段说明：
@@ -62,6 +68,16 @@ logging:
 - `logging.level`：日志级别（如 `INFO`、`WARNING`、`ERROR`）
 - `logging.max_bytes`：单个日志文件最大字节数，超过后滚动
 - `logging.backup_count`：滚动日志保留份数
+- `feishu.enabled`：是否开启飞书 GPU 定时通知
+- `feishu.report_interval_seconds`：飞书通知周期（秒）
+- `feishu.webhook_env_var`：飞书 webhook 的环境变量名
+- `feishu.timeout_seconds`：飞书请求超时（秒）
+
+飞书 webhook 不写入配置文件，通过环境变量注入，例如：
+
+```bash
+export FEISHU_BOT_WEBHOOK='https://open.feishu.cn/open-apis/bot/v2/hook/xxxx'
+```
 
 ## API 概览
 
@@ -71,6 +87,7 @@ logging:
 - `GET /api/metrics/gpu-processes/current?limit=50`：当前 GPU 进程列表
 - `GET /api/metrics/gpu-devices/current`：当前每张 GPU 卡指标
 - `GET /api/metrics/status`：采集状态和最近错误
+- `GET /api/metrics/feishu-preview`：预览即将发送到飞书的 GPU 文本
 - `GET /api/metrics/config`：当前生效配置（包含日志配置）
 - `GET /healthz`：健康检查
 

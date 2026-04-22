@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import datetime, timezone
 
 from sqlalchemy import select
@@ -90,3 +91,69 @@ def test_collect_and_persist_records_error(test_settings, monkeypatch) -> None:
     scheduler = MonitorScheduler(test_settings)
     scheduler.collect_and_persist()
     assert "boom" in (scheduler.get_runtime_state().last_collection_error or "")
+
+
+def test_build_gpu_report_text_and_send(initialized_db, test_settings, monkeypatch) -> None:
+    _ = initialized_db
+    now = datetime.now(timezone.utc)
+    with get_session() as session:
+        session.add(
+            HostSample(
+                timestamp=now,
+                cpu_usage=1.0,
+                mem_usage=2.0,
+                load_1m=0.1,
+                load_5m=0.2,
+                load_15m=0.3,
+                gpu_util=50.0,
+                gpu_mem_used_mb=1024.0,
+                gpu_mem_total_mb=2048.0,
+            )
+        )
+        session.add(
+            GpuDeviceSample(
+                timestamp=now,
+                gpu_uuid="gpu0",
+                gpu_index=0,
+                gpu_name="GPU0",
+                gpu_util=66.6,
+                gpu_mem_used_mb=3000.0,
+                gpu_mem_total_mb=10000.0,
+                process_count=2,
+            )
+        )
+
+    called: dict[str, str] = {}
+
+    def fake_send(url: str, text: str, timeout_seconds: int) -> None:
+        called["url"] = url
+        called["text"] = text
+        called["timeout"] = str(timeout_seconds)
+
+    monkeypatch.setattr(scheduler_module, "send_text_message", fake_send)
+    monkeypatch.setenv("FEISHU_BOT_WEBHOOK", "https://open.feishu.cn/open-apis/bot/v2/hook/mock")
+    scheduler = MonitorScheduler(replace(test_settings, feishu_enabled=True))
+    scheduler.report_gpu_to_feishu()
+
+    assert called["url"].endswith("/mock")
+    assert "每卡详情:" in called["text"]
+    assert "🌖 GPU0:" in called["text"]
+    assert "66.6%" in called["text"]
+    assert "2.93/9.77" in called["text"]
+    assert "GB" in called["text"]
+    assert "进程 2" in called["text"]
+    assert "⚪ GPU7: 计算 --.-% | 显存 --/-- GB (--.-%)" in called["text"]
+    assert called["timeout"] == "5"
+
+
+def test_report_gpu_to_feishu_skip_when_webhook_missing(test_settings, monkeypatch) -> None:
+    called = {"count": 0}
+
+    def fake_send(url: str, text: str, timeout_seconds: int) -> None:  # noqa: ARG001
+        called["count"] += 1
+
+    monkeypatch.setattr(scheduler_module, "send_text_message", fake_send)
+    monkeypatch.delenv("FEISHU_BOT_WEBHOOK", raising=False)
+    scheduler = MonitorScheduler(replace(test_settings, feishu_enabled=True))
+    scheduler.report_gpu_to_feishu()
+    assert called["count"] == 0

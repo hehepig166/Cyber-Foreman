@@ -100,25 +100,42 @@ def get_snapshot(limit: int = Query(default=20, ge=1, le=200)) -> dict[str, Any]
 
 
 @router.get("/history")
-def get_history(range_window: str = Query(default="1h")) -> dict[str, Any]:
+def get_history(
+    request: Request,
+    range_window: str = Query(default="1h"),
+    downsample_seconds: int | None = Query(default=None, ge=1, le=3600),
+) -> dict[str, Any]:
     window = _parse_range(range_window)
     cutoff = utcnow() - window
+    settings = getattr(request.app.state, "settings", None)
+    sample_step = downsample_seconds
+    if sample_step is None and settings is not None:
+        sample_step = getattr(settings, "web_refresh_interval_seconds", 10)
+    if sample_step is None:
+        sample_step = 10
 
     with get_session() as session:
         rows = session.execute(
             select(HostSample).where(HostSample.timestamp >= cutoff).order_by(HostSample.timestamp.asc())
         ).scalars()
-        points = [
-            {
-                "timestamp": row.timestamp,
-                "cpu_usage": row.cpu_usage,
-                "mem_usage": row.mem_usage,
-                "gpu_util": row.gpu_util,
-                "gpu_mem_used_mb": row.gpu_mem_used_mb,
-                "gpu_mem_total_mb": row.gpu_mem_total_mb,
-            }
-            for row in rows
-        ]
+        points = []
+        last_kept_ts = None
+        for row in rows:
+            if last_kept_ts is not None:
+                delta_seconds = (row.timestamp - last_kept_ts).total_seconds()
+                if delta_seconds < sample_step:
+                    continue
+            points.append(
+                {
+                    "timestamp": row.timestamp,
+                    "cpu_usage": row.cpu_usage,
+                    "mem_usage": row.mem_usage,
+                    "gpu_util": row.gpu_util,
+                    "gpu_mem_used_mb": row.gpu_mem_used_mb,
+                    "gpu_mem_total_mb": row.gpu_mem_total_mb,
+                }
+            )
+            last_kept_ts = row.timestamp
         return {"points": points}
 
 
@@ -219,6 +236,20 @@ def get_status(request: Request) -> dict[str, Any]:
     }
 
 
+@router.get("/feishu-preview")
+def get_feishu_preview(request: Request) -> dict[str, Any]:
+    scheduler = getattr(request.app.state, "monitor_scheduler", None)
+    if scheduler is None:
+        return {"ready": False, "message": "scheduler is not initialized", "text": ""}
+    if not hasattr(scheduler, "build_gpu_report_text"):
+        return {"ready": False, "message": "feishu preview is unavailable", "text": ""}
+    try:
+        text = scheduler.build_gpu_report_text()
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"failed to build feishu preview: {exc}") from exc
+    return {"ready": True, "message": "ok", "text": text}
+
+
 @router.get("/config")
 def get_config(request: Request) -> dict[str, Any]:
     settings = getattr(request.app.state, "settings", None)
@@ -228,6 +259,7 @@ def get_config(request: Request) -> dict[str, Any]:
         "loaded": True,
         "server_host": settings.server_host,
         "server_port": settings.server_port,
+        "web_refresh_interval_seconds": getattr(settings, "web_refresh_interval_seconds", 10),
         "database_path": str(settings.db_path),
         "sample_interval_seconds": settings.sample_interval_seconds,
         "retention_days": settings.retention_days,

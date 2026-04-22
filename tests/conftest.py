@@ -21,6 +21,10 @@ def test_settings(tmp_path: Path) -> Settings:
         log_level="INFO",
         log_max_bytes=1024 * 1024,
         log_backup_count=2,
+        feishu_enabled=False,
+        feishu_report_interval_seconds=3600,
+        feishu_webhook_env_var="FEISHU_BOT_WEBHOOK",
+        feishu_timeout_seconds=5,
     )
 
 

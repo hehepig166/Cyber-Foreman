@@ -20,6 +20,9 @@ class DummyScheduler:
     def get_runtime_state(self) -> RuntimeState:
         return RuntimeState(last_collection_error=None, last_gpu_error=None, samples_written=3)
 
+    def build_gpu_report_text(self) -> str:
+        return "GPU 小时巡检（采样时间: 2026-04-22 03:00:00 UTC）\nGPU0: 计算占用 10.0% | 显存占用 100/1000 MB (10.0%)"
+
 
 def create_test_app(test_settings) -> FastAPI:
     app = FastAPI()
@@ -126,6 +129,11 @@ def test_metrics_endpoints(initialized_db, test_settings) -> None:
     status = client.get("/api/metrics/status")
     assert status.status_code == 200
     assert status.json()["samples_written"] == 3
+
+    preview = client.get("/api/metrics/feishu-preview")
+    assert preview.status_code == 200
+    assert preview.json()["ready"] is True
+    assert "GPU0: 计算占用 10.0%" in preview.json()["text"]
 
     config = client.get("/api/metrics/config")
     assert config.status_code == 200

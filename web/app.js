@@ -304,6 +304,6 @@ window.addEventListener("resize", () => {
 });
 
 refreshAll();
-setInterval(loadSnapshot, 5000);
-setInterval(loadHistory, 15000);
+setInterval(loadSnapshot, 10000);
+setInterval(loadHistory, 10000);
 

@@ -6,7 +6,7 @@ database:
   path: data/monitor.db
 
 collection:
-  sample_interval_seconds: 5
+  sample_interval_seconds: 10
   process_top_n: 50
 
 retention:
@@ -18,3 +18,9 @@ logging:
   level: INFO
   max_bytes: 10485760
   backup_count: 5
+
+feishu:
+  enabled: true
+  report_interval_seconds: 60 #3600
+  webhook_env_var: FEISHU_BOT_WEBHOOK
+  timeout_seconds: 5

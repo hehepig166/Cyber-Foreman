@@ -25,6 +25,11 @@ def test_load_settings_from_yaml(tmp_path: Path) -> None:
                 "  level: debug",
                 "  max_bytes: 2048",
                 "  backup_count: 3",
+                "feishu:",
+                "  enabled: true",
+                "  report_interval_seconds: 1800",
+                "  webhook_env_var: FEISHU_HOOK",
+                "  timeout_seconds: 9",
                 "",
             ]
         ),
@@ -40,6 +45,10 @@ def test_load_settings_from_yaml(tmp_path: Path) -> None:
     assert settings.log_level == "DEBUG"
     assert settings.log_max_bytes == 2048
     assert settings.log_backup_count == 3
+    assert settings.feishu_enabled is True
+    assert settings.feishu_report_interval_seconds == 1800
+    assert settings.feishu_webhook_env_var == "FEISHU_HOOK"
+    assert settings.feishu_timeout_seconds == 9
     assert settings.db_path == (Path(__file__).resolve().parent.parent / "data/local.db")
     assert settings.log_file_path == (Path(__file__).resolve().parent.parent / "logs/custom.log")
 
@@ -51,3 +60,7 @@ def test_load_settings_defaults_when_file_missing(tmp_path: Path) -> None:
     assert settings.sample_interval_seconds == 5
     assert settings.retention_days == 30
     assert settings.process_top_n == 50
+    assert settings.feishu_enabled is False
+    assert settings.feishu_report_interval_seconds == 3600
+    assert settings.feishu_webhook_env_var == "FEISHU_BOT_WEBHOOK"
+    assert settings.feishu_timeout_seconds == 5
