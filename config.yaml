@@ -24,3 +24,4 @@ feishu:
   report_interval_seconds: 3600
   webhook_env_var: FEISHU_BOT_WEBHOOK
   timeout_seconds: 5
+  timezone: Asia/Shanghai

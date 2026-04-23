@@ -54,6 +54,7 @@ feishu:
   report_interval_seconds: 3600
   webhook_env_var: FEISHU_BOT_WEBHOOK
   timeout_seconds: 5
+  timezone: Asia/Shanghai
 ```
 
 字段说明：
@@ -72,6 +73,7 @@ feishu:
 - `feishu.report_interval_seconds`：飞书通知周期（秒）
 - `feishu.webhook_env_var`：飞书 webhook 的环境变量名
 - `feishu.timeout_seconds`：飞书请求超时（秒）
+- `feishu.timezone`：飞书消息中显示时间使用的 IANA 时区（如 `Asia/Shanghai`）
 
 飞书 webhook 不写入配置文件，通过环境变量注入，例如：
 

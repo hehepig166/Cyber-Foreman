@@ -268,5 +268,6 @@ def get_config(request: Request) -> dict[str, Any]:
         "log_level": settings.log_level,
         "log_max_bytes": settings.log_max_bytes,
         "log_backup_count": settings.log_backup_count,
+        "feishu_timezone": settings.feishu_timezone,
     }
 

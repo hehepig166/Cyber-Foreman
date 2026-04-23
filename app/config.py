@@ -41,6 +41,7 @@ class Settings:
     feishu_report_interval_seconds: int
     feishu_webhook_env_var: str
     feishu_timeout_seconds: int
+    feishu_timezone: str
 
 
 def load_settings(config_path: Optional[Path] = None) -> Settings:
@@ -118,6 +119,9 @@ def load_settings(config_path: Optional[Path] = None) -> Settings:
         1,
         _as_int(feishu_config.get("timeout_seconds", 5) if isinstance(feishu_config, dict) else 5, 5),
     )
+    feishu_timezone = "Asia/Shanghai"
+    if isinstance(feishu_config, dict):
+        feishu_timezone = str(feishu_config.get("timezone", feishu_timezone))
     return Settings(
         server_host=server_host,
         server_port=server_port,
@@ -133,5 +137,6 @@ def load_settings(config_path: Optional[Path] = None) -> Settings:
         feishu_report_interval_seconds=feishu_report_interval_seconds,
         feishu_webhook_env_var=feishu_webhook_env_var,
         feishu_timeout_seconds=feishu_timeout_seconds,
+        feishu_timezone=feishu_timezone,
     )
 

@@ -3,9 +3,10 @@ from __future__ import annotations
 import logging
 import os
 from dataclasses import dataclass
-from datetime import timezone
+from datetime import tzinfo, timezone
 from threading import Lock
 from typing import Optional
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
@@ -41,6 +42,14 @@ def _gpu_util_emoji(util: float | None) -> str:
     if normalized_util < 80:
         return "🌖"
     return "🌕"
+
+
+def _resolve_report_timezone(tz_name: str) -> tuple[tzinfo, str]:
+    try:
+        return ZoneInfo(tz_name), tz_name
+    except ZoneInfoNotFoundError:
+        logger.warning("Invalid feishu timezone %r, fallback to UTC.", tz_name)
+        return timezone.utc, "UTC"
 
 
 @dataclass
@@ -191,7 +200,8 @@ class MonitorScheduler:
             ).scalars()
             samples = {row.gpu_index: row for row in rows}
 
-        local_time = latest_ts.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+        report_tz, report_tz_label = _resolve_report_timezone(self.settings.feishu_timezone)
+        local_time = latest_ts.astimezone(report_tz).strftime("%Y-%m-%d %H:%M:%S")
         total_mem_used = latest_host.gpu_mem_used_mb or 0.0
         total_mem = latest_host.gpu_mem_total_mb or 0.0
         total_mem_pct = (total_mem_used / total_mem * 100) if total_mem > 0 else 0.0
@@ -199,7 +209,7 @@ class MonitorScheduler:
         total_mem_gb = total_mem / 1024
 
         lines = [
-            f"GPU 定时巡检 | {local_time}",
+            f"GPU 定时巡检 | {local_time} ({report_tz_label})",
             "----------------------------------------",
             "总体: "
             f"GPU {latest_host.gpu_util if latest_host.gpu_util is not None else '-'}% | "

@@ -156,6 +156,7 @@ def test_build_gpu_report_text_and_send(initialized_db, test_settings, monkeypat
     assert "进程 2" in called["text"]
     assert "🌑 GPU1:" in called["text"]
     assert "⚪ GPU7: 计算 --.-% | 显存 --/-- GB (--.-%)" in called["text"]
+    assert "(Asia/Shanghai)" in called["text"]
     assert called["timeout"] == "5"
 
 
@@ -170,3 +171,26 @@ def test_report_gpu_to_feishu_skip_when_webhook_missing(test_settings, monkeypat
     scheduler = MonitorScheduler(replace(test_settings, feishu_enabled=True))
     scheduler.report_gpu_to_feishu()
     assert called["count"] == 0
+
+
+def test_build_gpu_report_text_fallback_to_utc_when_timezone_invalid(initialized_db, test_settings) -> None:
+    _ = initialized_db
+    now = datetime.now(timezone.utc)
+    with get_session() as session:
+        session.add(
+            HostSample(
+                timestamp=now,
+                cpu_usage=1.0,
+                mem_usage=2.0,
+                load_1m=0.1,
+                load_5m=0.2,
+                load_15m=0.3,
+                gpu_util=50.0,
+                gpu_mem_used_mb=1024.0,
+                gpu_mem_total_mb=2048.0,
+            )
+        )
+
+    scheduler = MonitorScheduler(replace(test_settings, feishu_timezone="Invalid/Timezone"))
+    text = scheduler.build_gpu_report_text()
+    assert "(UTC)" in text

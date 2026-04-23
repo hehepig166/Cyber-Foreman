@@ -30,6 +30,7 @@ def test_load_settings_from_yaml(tmp_path: Path) -> None:
                 "  report_interval_seconds: 1800",
                 "  webhook_env_var: FEISHU_HOOK",
                 "  timeout_seconds: 9",
+                "  timezone: Asia/Shanghai",
                 "",
             ]
         ),
@@ -49,6 +50,7 @@ def test_load_settings_from_yaml(tmp_path: Path) -> None:
     assert settings.feishu_report_interval_seconds == 1800
     assert settings.feishu_webhook_env_var == "FEISHU_HOOK"
     assert settings.feishu_timeout_seconds == 9
+    assert settings.feishu_timezone == "Asia/Shanghai"
     assert settings.db_path == (Path(__file__).resolve().parent.parent / "data/local.db")
     assert settings.log_file_path == (Path(__file__).resolve().parent.parent / "logs/custom.log")
 
@@ -64,3 +66,4 @@ def test_load_settings_defaults_when_file_missing(tmp_path: Path) -> None:
     assert settings.feishu_report_interval_seconds == 3600
     assert settings.feishu_webhook_env_var == "FEISHU_BOT_WEBHOOK"
     assert settings.feishu_timeout_seconds == 5
+    assert settings.feishu_timezone == "Asia/Shanghai"

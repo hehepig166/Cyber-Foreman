@@ -25,6 +25,7 @@ def test_settings(tmp_path: Path) -> Settings:
         feishu_report_interval_seconds=3600,
         feishu_webhook_env_var="FEISHU_BOT_WEBHOOK",
         feishu_timeout_seconds=5,
+        feishu_timezone="Asia/Shanghai",
     )
 
 
